@@ -82,7 +82,7 @@ def encrypt():
         data = request.json['data']  # 用户输入的明文
         key = request.json['key']    # 用户输入的密钥
         algorithm = request.json.get('algorithm', 'AES')  # 算法，默认为 AES
-        print(f"Algorithm received: {algorithm}")
+#        print(f"Algorithm received: {algorithm}")
 
         # 根据算法调用加密函数（这里只实现了 AES，DES）
         if algorithm == 'AES':
@@ -132,7 +132,7 @@ def decrypt():
 
         return jsonify({'result': result})
     except Exception as e:
-        result = '请输入正确格式的密文'  # 自定义的错误内容
+        result = '检查输入的密钥(八字节)和密文(正确格式)是否正确'  # 自定义的错误内容
         return jsonify({'result': result, 'error': str(e)}), 500
 #        return jsonify({'error': str(e)}), 500
 
