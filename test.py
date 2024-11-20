@@ -82,6 +82,7 @@ def encrypt():
         data = request.json['data']  # 用户输入的明文
         key = request.json['key']    # 用户输入的密钥
         algorithm = request.json.get('algorithm', 'AES')  # 算法，默认为 AES
+        print(f"Algorithm received: {algorithm}")
 
         # 根据算法调用加密函数（这里只实现了 AES，DES）
         if algorithm == 'AES':
