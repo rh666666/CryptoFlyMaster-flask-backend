@@ -1,45 +1,10 @@
-#flask项目
+from hao import DES
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-#DES加密
-from hao import DES
-#AES加密
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import padding
-import base64
 
 app = Flask(__name__)
-CORS(app)  # 允许跨域访问
+CORS(app)
 
-# AES 加解密逻辑
-def aes_encrypt(data, key):
-    key = key.encode("utf-8").ljust(16)[:16]  # 确保密钥长度为 16 字节
-    cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=default_backend())
-    encryptor = cipher.encryptor()
-
-    # 填充数据
-    padder = padding.PKCS7(128).padder()
-    padded_data = padder.update(data.encode("utf-8")) + padder.finalize()
-
-    # 加密数据
-    encrypted = encryptor.update(padded_data) + encryptor.finalize()
-    return base64.b64encode(encrypted).decode("utf-8")
-
-def aes_decrypt(data, key):
-    key = key.encode("utf-8").ljust(16)[:16]  # 确保密钥长度为 16 字节
-    cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=default_backend())
-    decryptor = cipher.decryptor()
-
-    # 解密数据
-    decrypted = decryptor.update(base64.b64decode(data)) + decryptor.finalize()
-
-    # 移除填充
-    unpadder = padding.PKCS7(128).unpadder()
-    unpadded_data = unpadder.update(decrypted) + unpadder.finalize()
-    return unpadded_data.decode("utf-8")
-
-#DES加密逻辑
 def pkcs7_pad(data: bytes, block_size: int = 8) -> bytes:
     """
     对数据进行 PKCS#7 填充。
@@ -61,7 +26,45 @@ def pkcs7_unpad(data: bytes) -> bytes:
     if padding_len > len(data):
         raise ValueError("Invalid padding.")
     return data[:-padding_len]
+'''
+def main():
+        choice = int(input("请输入 1 进行加密, 2 进行解密: "))
+        if choice not in [1, 2]:
+            print("无效选择")
+            return
+        
+        Text = input("请输入文本:")
+        if choice == 1:
+            Text_hex = ''.join(format(ord(char), '02x') for char in Text if char.isprintable())
+            data_bytes = bytes.fromhex(Text_hex)
+            Text_hex = pkcs7_pad(data_bytes).hex()
+        else:
+            Text_hex = Text
 
+        Key = input("请输入密钥(64位,8字节):")
+        Key_hex = ''.join(format(ord(char), '02x') for char in Key if char.isprintable())
+        if len(Key_hex) != 16:
+            print("密钥长度不为 64 位。")
+            return
+        
+        result = ''
+
+        for i in range(0, len(Text_hex),16):
+            temp_str1 = Text_hex[i:i+16]
+            result += DES.encryption(temp_str1, Key_hex) if choice == 1 else DES.decryption(temp_str1, Key_hex)
+
+        if result:
+            if choice == 1:
+                print("加密后的密文:"+ result)
+            else:
+                data_bytes = bytes.fromhex(result)
+                result = pkcs7_unpad(data_bytes).hex()
+                byte_data = bytes.fromhex(result)
+                result = ''.join(chr(b) for b in byte_data)
+                print("解密后的明文:"+ result)
+        else:
+            print("处理失败，请检查输入。")
+'''
 def shuruzhuanhuan_encrypt(Text_hex):
     '''加密时对输入的文本进行格式转换，并进行填充'''
     Text_hex = ''.join(format(ord(char), '02x') for char in Text_hex if char.isprintable())
@@ -74,23 +77,20 @@ def secret_padding(key_hex):
     key_hex = ''.join(format(ord(char), '02x') for char in key_hex if char.isprintable())
     return key_hex
 
-#前后端交互
 @app.route('/encrypt', methods=['POST'])
 def encrypt():
     try:
         # 从请求中获取 JSON 数据
         data = request.json['data']  # 用户输入的明文
+        data = shuruzhuanhuan_encrypt(data)  # 进行格式转换和填充
         key = request.json['key']    # 用户输入的密钥
-        algorithm = request.json.get('algorithm', 'AES')  # 算法，默认为 AES
+        key = secret_padding(key)    # 进行密钥填充
+        algorithm = request.json.get('algorithm', 'DES')  # 算法，默认为 AES
 
-        # 根据算法调用加密函数（这里只实现了 AES，DES）
-        if algorithm == 'AES':
-            result = aes_encrypt(data, key)
-        elif algorithm == 'DES':
-            data = shuruzhuanhuan_encrypt(data)  # 进行格式转换和填充
-            key = secret_padding(key)    # 进行密钥填充
-
-            result = ''
+        # 根据算法调用加密函数（这里只实现了 AES）
+        result = ''
+        if algorithm == 'DES':
+#            result = aes_encrypt(data, key)
             for i in range(0, len(data),16):
                 temp_str1 = data[i:i+16]
                 result = result + DES.encryption(temp_str1, key) 
@@ -110,14 +110,12 @@ def decrypt():
     try:
         data = request.json['data']
         key = request.json['key']
-        algorithm = request.json.get('algorithm', 'AES')
+        key = secret_padding(key)    # 进行密钥填充
+        algorithm = request.json.get('algorithm', 'DES')
 
-        if algorithm == 'AES':
-            result = aes_decrypt(data, key)
-        elif algorithm == 'DES':
-            key = secret_padding(key)    # 进行密钥填充
-            
-            result = ''
+        result = ''
+        if algorithm == 'DES':
+#            result = aes_decrypt(data, key)
             for i in range(0, len(data),16):
                 temp_str1 = data[i:i+16]
                 result = result + DES.decryption(temp_str1, key)
@@ -137,3 +135,9 @@ def decrypt():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+'''if __name__ == '__main__':
+    main()
+    input("按任意键退出...")
+'''
