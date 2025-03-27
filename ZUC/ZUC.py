@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from modules.ZUC.config import *
+from ZUC.config import *
 #输入输出为16进制
 #
 
